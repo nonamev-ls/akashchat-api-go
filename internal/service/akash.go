@@ -71,7 +71,7 @@ func (a *AkashService) ProcessImageGeneration(req model.ChatCompletionRequest, s
 }
 
 // ProcessTextGeneration handles text generation requests
-func (a *AkashService) ProcessTextGeneration(req model.ChatCompletionRequest, sessionToken string, temperature, topP float64) (*model.TextGenerationData, error) {
+func (a *AkashService) ProcessTextGeneration(req model.ChatCompletionRequest, sessionToken string, temperature, topP float64) (*model.OpenAIChatCompletion, error) {
 	// Create Akash chat request
 	akashReq := model.AkashChatRequest{
 		ID:          utils.GenerateRandomID(16),
@@ -94,16 +94,10 @@ func (a *AkashService) ProcessTextGeneration(req model.ChatCompletionRequest, se
 		return nil, fmt.Errorf("invalid model")
 	}
 
-	// Extract message ID and content
-	messageID, allContent, thinkingContent, pureContent := a.extractTextGenerationInfo(respText)
+	// Extract and format the response
+	openAIResp := a.extractTextGenerationInfo(respText, req.Model)
 
-	return &model.TextGenerationData{
-		Model:           req.Model,
-		MessageID:       messageID,
-		AllContent:      allContent,
-		ThinkingContent: thinkingContent,
-		PureContent:     pureContent,
-	}, nil
+	return openAIResp, nil
 }
 
 // sendChatRequest sends a request to Akash chat API
@@ -194,17 +188,18 @@ func (a *AkashService) pollImageStatus(jobID string) (string, error) {
 	return "", fmt.Errorf("image generation timed out")
 }
 
-// extractTextGenerationInfo extracts text generation information from response
-func (a *AkashService) extractTextGenerationInfo(respText string) (string, string, string, string) {
+// extractTextGenerationInfo extracts text generation information from response and formats it as OpenAI's chat completion.
+func (a *AkashService) extractTextGenerationInfo(respText string, modelName string) *model.OpenAIChatCompletion {
 	var messageID string
 	var allContent strings.Builder
-	
+	var finishReason string
+
 	lines := strings.Split(respText, "\n")
 	var contentStarted bool
-	
+
 	for _, line := range lines {
 		line = strings.TrimSpace(line)
-		
+
 		// Extract messageId
 		if strings.HasPrefix(line, "f:{\"messageId\":") {
 			msgIDRegex := regexp.MustCompile(`"messageId":"([^"]+)"`)
@@ -215,39 +210,51 @@ func (a *AkashService) extractTextGenerationInfo(respText string) (string, strin
 			contentStarted = true
 			continue
 		}
-		
-		// Stop at the end marker
+
+		// Extract finishReason
 		if strings.HasPrefix(line, "e:{\"finishReason\":") {
+			reasonRegex := regexp.MustCompile(`"finishReason":"([^"]+)"`)
+			match := reasonRegex.FindStringSubmatch(line)
+			if len(match) > 1 {
+				finishReason = match[1]
+			}
 			break
 		}
-		
+
 		// Collect content lines
 		if contentStarted && strings.HasPrefix(line, "0:\"") {
-			// Remove the 0:" prefix and trailing "
 			content := line[3:]
 			content = strings.TrimSuffix(content, "\"")
-			// Unescape content
 			content = strings.ReplaceAll(content, "\\n", "\n")
 			content = strings.ReplaceAll(content, "\\\"", "\"")
 			allContent.WriteString(content)
 		}
 	}
-	
-	allContentStr := allContent.String()
-	
-	// Extract thinking content (with DOTALL flag to match across newlines)
-	thinkingRegex := regexp.MustCompile(`(?s)<think>(.*?)</think>`)
-	thinkingMatch := thinkingRegex.FindStringSubmatch(allContentStr)
-	var thinkingContent string
-	if len(thinkingMatch) > 1 {
-		thinkingContent = "<think>" + thinkingMatch[1] + "</think>"
+
+	fullContent := allContent.String()
+
+	// Create OpenAI format response
+	return &model.OpenAIChatCompletion{
+		ID:      "chatcmpl-" + messageID,
+		Object:  "chat.completion",
+		Created: time.Now().Unix(),
+		Model:   modelName,
+		Choices: []model.Choice{
+			{
+				Index: 0,
+				Message: model.Message{
+					Role:    "assistant",
+					Content: fullContent,
+				},
+				FinishReason: finishReason,
+			},
+		},
+		Usage: model.Usage{
+			PromptTokens:     0, // Placeholder, as Akash does not provide this
+			CompletionTokens: 0, // Placeholder
+			TotalTokens:      0, // Placeholder
+		},
 	}
-	
-	// Extract pure content (content without thinking)
-	pureContent := thinkingRegex.ReplaceAllString(allContentStr, "")
-	pureContent = strings.TrimSpace(pureContent)
-	
-	return messageID, allContentStr, thinkingContent, pureContent
 }
 
 // getSystemPrompt returns the system prompt for Akash

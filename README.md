@@ -81,13 +81,24 @@ curl -X POST http://localhost:16571/v1/chat/completions \
 **响应:**
 ```json
 {
-  "code": 200,
-  "data": {
-    "model": "Meta-Llama-3-3-70B-Instruct",
-    "messageId": "msg-orzxMXJQe8P5nt5CfRPnG46u",
-    "all_content": "你好！我很好，谢谢你的询问...",
-    "thinking_content": "<think>用户在问候我...</think>",
-    "pure_content": "你好！我很好，谢谢你的询问..."
+  "choices": [
+    {
+      "finish_reason": "stop",
+      "index": 0,
+      "message": {
+        "content": "你好！我很好，谢谢你的询问...",
+        "role": "assistant"
+      }
+    }
+  ],
+  "created": 1755506652,
+  "id": "chatcmpl-1755506652.79333",
+  "model": "Meta-Llama-3-3-70B-Instruct",
+  "object": "chat.completion",
+  "usage": {
+    "completion_tokens": 0,
+    "prompt_tokens": 0,
+    "total_tokens": 0
   }
 }
 ```

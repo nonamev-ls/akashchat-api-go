@@ -108,9 +108,6 @@ func (h *ChatHandler) ChatCompletions(c *gin.Context) {
 			return
 		}
 
-		c.JSON(http.StatusOK, model.APIResponse{
-			Code: 200,
-			Data: data,
-		})
+		c.JSON(http.StatusOK, data)
 	}
 }
