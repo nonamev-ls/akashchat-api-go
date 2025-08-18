@@ -145,24 +145,29 @@ curl http://localhost:16571/v1/models
 
 **响应:**
 ```json
-[
-  {
-    "id": "openai-gpt-oss-120b",
-    "name": "GPT-OSS-120B",
-    "description": "Efficient reasoning model with 117B parameters (5.1B active)",
-    "temperature": 0.6,
-    "top_p": 0.95,
-    "tokenLimit": 128000,
-    "parameters": "117B (5.1B active)",
-    "architecture": "Transformer with native MXFP4 quantization",
-    "hf_repo": "openai/gpt-oss-120b",
-    "aboutContent": "Experience **GPT-OSS-120B**, OpenAI's open-source reasoning model with 117B total parameters and 5.1B active parameters. Built with native MXFP4 quantization, this model is designed for powerful reasoning, agentic tasks, and versatile developer use cases.\n\nGPT-OSS-120B features configurable reasoning levels (Low, Medium, High) and supports advanced capabilities like tool use, web browsing, and function calling. Optimized to run efficiently on a single H100 GPU while delivering high-quality reasoning performance.",
-    "infoContent": "\n* ⚡ Open-source reasoning model with configurable reasoning levels\n* 🧠 117B parameters (5.1B active) with native MXFP4 quantization\n* 🌐 Decentralized hosting for lower costs & full control\n* 🔍 Optimized for reasoning, agentic tasks, and tool use",
-    "thumbnailId": "llama-3",
-    "deployUrl": "https://console.akash.network/templates/akash-network-awesome-akash-openai-gpt-oss-120b",
-    "available": true
-  }
-]
+{
+  "data": [
+    {
+      "id": "openai-gpt-oss-120b",
+      "object": "model",
+      "created": 1626777600,
+      "owned_by": "Akash Network",
+      "permission": null,
+      "root": "openai-gpt-oss-120b",
+      "parent": null
+    },
+    {
+      "id": "Qwen3-235B-A22B-Instruct-2507-FP8",
+      "object": "model",
+      "created": 1626777600,
+      "owned_by": "Akash Network",
+      "permission": null,
+      "root": "Qwen3-235B-A22B-Instruct-2507-FP8",
+      "parent": null
+    }
+  ],
+  "object": "list"
+}
 ```
 
 ### 健康检查

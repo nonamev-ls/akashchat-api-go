@@ -75,3 +75,19 @@ type Delta struct {
 	Role    string `json:"role,omitempty"`
 	Content string `json:"content,omitempty"`
 }
+// OpenAIModel represents a single model in the OpenAI models list.
+type OpenAIModel struct {
+	ID         string      `json:"id"`
+	Object     string      `json:"object"`
+	Created    int64       `json:"created"`
+	OwnedBy    string      `json:"owned_by"`
+	Permission interface{} `json:"permission"`
+	Root       string      `json:"root"`
+	Parent     interface{} `json:"parent"`
+}
+
+// OpenAIModelsList represents the list of OpenAI models.
+type OpenAIModelsList struct {
+	Object string        `json:"object"`
+	Data   []OpenAIModel `json:"data"`
+}

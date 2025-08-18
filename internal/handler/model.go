@@ -48,5 +48,23 @@ func (h *ModelHandler) GetModels(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, models)
+	var openAIModels []model.OpenAIModel
+	for _, m := range models {
+		if m.Available {
+			openAIModels = append(openAIModels, model.OpenAIModel{
+				ID:         m.ID,
+				Object:     "model",
+				Created:    1755000000,
+				OwnedBy:    "Akash Network",
+				Permission: nil,
+				Root:       m.ID,
+				Parent:     nil,
+			})
+		}
+	}
+
+	c.JSON(http.StatusOK, model.OpenAIModelsList{
+		Object: "list",
+		Data:   openAIModels,
+	})
 }
