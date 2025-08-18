@@ -14,15 +14,6 @@ type ImageGenerationData struct {
 	Pic    string `json:"pic"`
 }
 
-// TextGenerationData represents response data for text generation
-type TextGenerationData struct {
-	Model           string `json:"model"`
-	MessageID       string `json:"messageId"`
-	AllContent      string `json:"all_content"`
-	ThinkingContent string `json:"thinking_content"`
-	PureContent     string `json:"pure_content"`
-}
-
 // ErrorData represents error response data
 type ErrorData struct {
 	Message string `json:"msg"`
@@ -61,4 +52,26 @@ type Usage struct {
 	PromptTokens     int `json:"prompt_tokens"`
 	CompletionTokens int `json:"completion_tokens"`
 	TotalTokens      int `json:"total_tokens"`
+}
+
+// OpenAIStreamCompletion represents the chat completion response in OpenAI stream format.
+type OpenAIStreamCompletion struct {
+	ID      string               `json:"id"`
+	Object  string               `json:"object"`
+	Created int64                `json:"created"`
+	Model   string               `json:"model"`
+	Choices []OpenAIStreamChoice `json:"choices"`
+}
+
+// OpenAIStreamChoice represents a single choice in the chat completion stream response.
+type OpenAIStreamChoice struct {
+	Index        int    `json:"index"`
+	Delta        Delta  `json:"delta"`
+	FinishReason string `json:"finish_reason,omitempty"`
+}
+
+// Delta represents a delta in the chat completion stream response.
+type Delta struct {
+	Role    string `json:"role,omitempty"`
+	Content string `json:"content,omitempty"`
 }

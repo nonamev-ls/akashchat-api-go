@@ -10,7 +10,7 @@ A Go-based REST API service that provides a proxy interface to Akash Chat API, s
 ## Features
 
 - **Unified API Interface**: Compatible with OpenAI ChatGPT API format
-- **Text Generation**: Support for various text generation models
+- **Text Generation**: Support for various text generation models, including streaming support.
 - **Image Generation**: Support for AkashGen image generation model
 - **Session Management**: Automatic session token caching and refresh
 - **Error Handling**: Comprehensive error handling and validation
@@ -216,6 +216,7 @@ akashchat-api-go/
 | `model` | String | Yes | - | Model name (e.g., "Meta-Llama-3-3-70B-Instruct", "AkashGen") |
 | `temperature` | Float | No | 0.85 | Sampling temperature (0.0-2.0) |
 | `topP` | Float | No | 1.0 | Top-p sampling parameter |
+| `stream` | Boolean | No | false | Enable streaming response |
 
 ### Message Object
 

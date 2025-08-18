@@ -1,10 +1,12 @@
 package service
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
+	"net/http"
 	"regexp"
 	"strings"
 	"time"
@@ -100,11 +102,138 @@ func (a *AkashService) ProcessTextGeneration(req model.ChatCompletionRequest, se
 	return openAIResp, nil
 }
 
-// sendChatRequest sends a request to Akash chat API
-func (a *AkashService) sendChatRequest(req model.AkashChatRequest, sessionToken string) (string, error) {
+// ProcessTextGenerationStream handles text generation requests with streaming
+func (a *AkashService) ProcessTextGenerationStream(req model.ChatCompletionRequest, sessionToken string, temperature, topP float64, writer io.Writer) error {
+	akashReq := model.AkashChatRequest{
+		ID:          utils.GenerateRandomID(16),
+		Messages:    req.Messages,
+		Model:       req.Model,
+		System:      getSystemPrompt(),
+		Temperature: temperature,
+		TopP:        topP,
+		Context:     []interface{}{},
+	}
+
+	respBody, err := a.sendStreamChatRequest(akashReq, sessionToken)
+	if err != nil {
+		return err
+	}
+	defer respBody.Close()
+
+	// Process the stream
+	return a.processStream(respBody, req.Model, writer)
+}
+
+func (a *AkashService) processStream(body io.Reader, modelName string, writer io.Writer) error {
+	scanner := bufio.NewScanner(body)
+	var messageID string
+	var contentStarted bool
+
+	for scanner.Scan() {
+		line := scanner.Text()
+		line = strings.TrimSpace(line)
+
+		if strings.HasPrefix(line, "f:{\"messageId\":") {
+			msgIDRegex := regexp.MustCompile(`"messageId":"([^"]+)"`)
+			match := msgIDRegex.FindStringSubmatch(line)
+			if len(match) > 1 {
+				messageID = "chatcmpl-" + match[1]
+			}
+			contentStarted = true
+
+			// Send initial stream message
+			streamResp := model.OpenAIStreamCompletion{
+				ID:      messageID,
+				Object:  "chat.completion.chunk",
+				Created: time.Now().Unix(),
+				Model:   modelName,
+				Choices: []model.OpenAIStreamChoice{
+					{
+						Index: 0,
+						Delta: model.Delta{
+							Role: "assistant",
+						},
+					},
+				},
+			}
+			a.writeStreamResponse(writer, streamResp)
+			continue
+		}
+
+		if strings.HasPrefix(line, "e:{\"finishReason\":") {
+			reasonRegex := regexp.MustCompile(`"finishReason":"([^"]+)"`)
+			match := reasonRegex.FindStringSubmatch(line)
+			var finishReason string
+			if len(match) > 1 {
+				finishReason = match[1]
+			}
+
+			// Send final stream message
+			streamResp := model.OpenAIStreamCompletion{
+				ID:      messageID,
+				Object:  "chat.completion.chunk",
+				Created: time.Now().Unix(),
+				Model:   modelName,
+				Choices: []model.OpenAIStreamChoice{
+					{
+						Index:        0,
+						Delta:        model.Delta{},
+						FinishReason: finishReason,
+					},
+				},
+			}
+			a.writeStreamResponse(writer, streamResp)
+			break
+		}
+
+		if contentStarted && strings.HasPrefix(line, "0:\"") {
+			content := line[3:]
+			content = strings.TrimSuffix(content, "\"")
+			content = strings.ReplaceAll(content, "\\n", "\n")
+			content = strings.ReplaceAll(content, "\\\"", "\"")
+
+			streamResp := model.OpenAIStreamCompletion{
+				ID:      messageID,
+				Object:  "chat.completion.chunk",
+				Created: time.Now().Unix(),
+				Model:   modelName,
+				Choices: []model.OpenAIStreamChoice{
+					{
+						Index: 0,
+						Delta: model.Delta{
+							Content: content,
+						},
+					},
+				},
+			}
+			a.writeStreamResponse(writer, streamResp)
+		}
+	}
+
+	if err := scanner.Err(); err != nil {
+		return fmt.Errorf("error reading stream: %w", err)
+	}
+
+	return nil
+}
+
+func (a *AkashService) writeStreamResponse(writer io.Writer, resp model.OpenAIStreamCompletion) {
+	var buf bytes.Buffer
+	enc := json.NewEncoder(&buf)
+	enc.SetEscapeHTML(false)
+	enc.Encode(resp)
+
+	fmt.Fprintf(writer, "data: %s\n\n", buf.String())
+	if flusher, ok := writer.(http.Flusher); ok {
+		flusher.Flush()
+	}
+}
+
+// sendStreamChatRequest sends a request to Akash chat API and returns the response body as a stream
+func (a *AkashService) sendStreamChatRequest(req model.AkashChatRequest, sessionToken string) (io.ReadCloser, error) {
 	jsonData, err := json.Marshal(req)
 	if err != nil {
-		return "", fmt.Errorf("failed to marshal request: %w", err)
+		return nil, fmt.Errorf("failed to marshal request: %w", err)
 	}
 
 	headers := map[string]string{
@@ -116,16 +245,26 @@ func (a *AkashService) sendChatRequest(req model.AkashChatRequest, sessionToken 
 
 	resp, err := a.httpClient.Post("https://chat.akash.network/api/chat/", bytes.NewBuffer(jsonData), headers)
 	if err != nil {
-		return "", fmt.Errorf("failed to send chat request: %w", err)
+		return nil, fmt.Errorf("failed to send chat request: %w", err)
 	}
-	defer resp.Body.Close()
 
-	respBody, err := io.ReadAll(resp.Body)
+	return resp.Body, nil
+}
+
+// sendChatRequest sends a request to Akash chat API
+func (a *AkashService) sendChatRequest(req model.AkashChatRequest, sessionToken string) (string, error) {
+	respBody, err := a.sendStreamChatRequest(req, sessionToken)
+	if err != nil {
+		return "", err
+	}
+	defer respBody.Close()
+
+	bodyBytes, err := io.ReadAll(respBody)
 	if err != nil {
 		return "", fmt.Errorf("failed to read response: %w", err)
 	}
 
-	return string(respBody), nil
+	return string(bodyBytes), nil
 }
 
 // extractImageGenerationInfo extracts jobId and prompt from image generation response
