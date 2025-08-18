@@ -46,14 +46,22 @@ The server will start on `localhost:16571` by default.
 
 ### Using Docker
 
+#### Pull from Docker Hub
+
+```bash
+docker pull 006lp/akashchat-api-go:latest
+```
+
+#### Build Locally
+
 1. Build the Docker image:
 ```bash
-docker build -t akashchat-api-go .
+docker build -t 006lp/akashchat-api-go .
 ```
 
 2. Run the container:
 ```bash
-docker run -p 16571:16571 akashchat-api-go
+docker run -p 16571:16571 006lp/akashchat-api-go
 ```
 
 ## API Usage

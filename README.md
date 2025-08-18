@@ -46,14 +46,22 @@ go run cmd/server/main.go
 
 ### 使用 Docker
 
+#### 从 Docker Hub 拉取镜像
+
+```bash
+docker pull 006lp/akashchat-api-go:latest
+```
+
+#### 本地构建
+
 1. 构建 Docker 镜像:
 ```bash
-docker build -t akashchat-api-go .
+docker build -t 006lp/akashchat-api-go .
 ```
 
 2. 运行容器:
 ```bash
-docker run -p 16571:16571 akashchat-api-go
+docker run -p 16571:16571 006lp/akashchat-api-go
 ```
 
 ## API 使用
